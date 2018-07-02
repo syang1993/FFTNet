@@ -1,0 +1,7 @@
+*.pyc
+corpus/
+checkpoints*
+database
+training_data
+__pycache__
+*.wav
