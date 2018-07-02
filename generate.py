@@ -59,7 +59,7 @@ def generate_fn(args):
                                                 model.receptive_field, read_fn=lambda x: np.load(x))
 
         start = time.time()
-        for i in range(30000):#local_condition.size(-1)):
+        for i in range(local_condition.size(-1)):
             sample = torch.LongTensor(np.array(samples[-model.receptive_field:])).unsqueeze(0)
             sample = sample.unsqueeze(-1)
             h = local_condition[:, :, i : i + model.receptive_field]
