@@ -124,8 +124,8 @@ def train_fn(args):
             audio, target, h = audio.to(device), target.to(device), local_condition.to(device)
 
             optimizer.zero_grad()
-            output = model(audio, h)
-            loss = criterion(output[:, :, 1:], target)
+            output = model(audio[:,:-1,:], h[:,:,1:])
+            loss = criterion(output, target)
             log('step [%3d]: loss: %.3f' % (global_step, loss.item()))
             writer.add_scalar('loss', loss.item(), global_step)
 
@@ -144,7 +144,7 @@ def train_fn(args):
             #raise
 
             if global_step % hparams.checkpoint_interval == 0:
-                save_checkpoint(device, hparams, model, global_step, args.checkpoint_dir, ema)
+                save_checkpoint(device, hparams, model, optimizer, global_step, args.checkpoint_dir, ema)
                 out = output[1,:,:]
                 samples=out.argmax(0)
                 waveform = mu_law_decode(np.asarray(samples[model.receptive_field:]),hparams.quantization_channels)

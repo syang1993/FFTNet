@@ -46,9 +46,12 @@ def generate_fn(args):
         fft_channels=hparams.fft_channels,
         quantization_channels=hparams.quantization_channels,
         local_condition_channels=hparams.num_mels)
+    checkpoint = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
 
-    model.load_state_dict(torch.load(
-        args.checkpoint, map_location=lambda storage, loc: storage))
+    if torch.cuda.device_count() > 1:
+        model.module.load_state_dict(checkpoint['model'])
+    else:
+        model.load_state_dict(checkpoint['model'])
 
     model.to(device)
 

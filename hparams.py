@@ -18,10 +18,10 @@ hparams = tf.contrib.training.HParams(
   use_cuda=True,
   use_local_condition=True,
   batch_size=5,
-  sample_size=5000,
+  sample_size=16000,
   learning_rate=2e-4,
   training_steps=100000,
-  checkpoint_interval=10000,
+  checkpoint_interval=5000,
 
   # Model
   n_stacks=11,
