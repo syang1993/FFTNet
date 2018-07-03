@@ -2,6 +2,7 @@
 corpus/
 checkpoints*
 database
+test
 training_data
 __pycache__
 *.wav
