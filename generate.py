@@ -62,38 +62,20 @@ def generate_fn(args):
                                                 model.receptive_field, read_fn=lambda x: np.load(x))
 
         start = time.time()
-        for i in range(local_condition.size(-1)):
+        for i in tqdm(range(20000)):#local_condition.size(-1)):
             sample = torch.FloatTensor(np.array(samples[-model.receptive_field:]).reshape(1,-1,1))
             h = local_condition[:, :, i+1 : i+1 + model.receptive_field]
             sample, h = sample.to(device), h.to(device)
             output = model(sample, h)
             output = F.softmax(output, dim=1)
             sample = output.argmax(1)[0,:].cpu().numpy()
-            print(sample)
+            #print(sample)
             sample = mu_law_decode(np.asarray(sample), 256)
-            print("%d %.7f" %(i, sample))
+            #print("%d %.7f" %(i, sample))
             samples.append(sample)
 
-           # prediction = output.data[0, :, -1].cpu().numpy()
-           # temperature = 1.0
-           # np.seterr(divide='ignore')
-           # scaled_prediction = np.log(prediction) / temperature
-           # scaled_prediction = (scaled_prediction -
-           #                      np.logaddexp.reduce(scaled_prediction))
-           # scaled_prediction = np.exp(scaled_prediction)
-           # np.seterr(divide='warn')
-           # sample = np.random.choice(
-           #     np.arange(hparams.quantization_channels),
-           #     p=scaled_prediction)
-           # speed = (i + 1) / (time.time() - start)
-           # display('Generating: %i/%i, Speed: %.2f samples/sec', (i, local_condition.size(-1), speed))
 
-           # samples.append(sample)
-
-        #waveform = mu_law_decode(
-        #    np.asarray(samples[model.receptive_field:]),
-        #    hparams.quantization_channels)
-        write_wav(waveform, hparams.sample_rate, "generated.wav")
+        write_wav(np.asarray(samples), hparams.sample_rate, "generated.wav")
 
 
 if __name__ == '__main__':

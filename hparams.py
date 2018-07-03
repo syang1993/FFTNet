@@ -20,7 +20,7 @@ hparams = tf.contrib.training.HParams(
   batch_size=5,
   sample_size=16000,
   learning_rate=2e-4,
-  training_steps=100000,
+  training_steps=200000,
   checkpoint_interval=5000,
 
   # Model
