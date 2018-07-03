@@ -6,35 +6,49 @@ import argparse
 import os
 import re
 import sys
+import scipy.io.wavfile
 import torch
 import torch.nn as nn
+import numpy as np
 import torch.optim as optim
 
 from torch.utils.data import DataLoader
 from fftnet import FFTNet
 from dataset import CustomDataset
-from utils.utils import apply_moving_average, ExponentialMovingAverage
+from utils.utils import apply_moving_average, ExponentialMovingAverage, mu_law_decode
 from utils import infolog
 from hparams import hparams, hparams_debug_string
 from tensorboardX import SummaryWriter
 log = infolog.log
 
 
-def save_checkpoint(device, hparams, model, step, checkpoint_dir, ema=None):
+def write_wav(wav, sample_rate, filename):
+    wav *= 32767 / max(0.01, np.max(np.abs(wav)))
+    scipy.io.wavfile.write(filename, sample_rate, wav.astype(np.int16))
+    print('Updated wav file at {}'.format(filename))
+
+def save_checkpoint(device, hparams, model, optimizer, step, checkpoint_dir, ema=None):
     model = model.module if isinstance(model, nn.DataParallel) else model
 
+    checkpoint_state = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "steps": step}
     checkpoint_path = os.path.join(
         checkpoint_dir, "model.ckpt-{}.pt".format(step))
-    torch.save(model.state_dict(), checkpoint_path)
+    torch.save(checkpoint_state, checkpoint_path)
     log("Saved checkpoint: {}".format(checkpoint_path))
 
     if ema is not None:
         averaged_model = clone_as_averaged_model(device, hparams, model, ema)
+        averaged_checkpoint_state = {
+            "model": averaged_model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "steps": step}
         checkpoint_path = os.path.join(
             checkpoint_dir, "model.ckpt-{}.ema.pt".format(step))
-        torch.save(averaged_model.state_dict(), checkpoint_path)
+        torch.save(averaged_checkpoint_state, checkpoint_path)
         log("Saved averaged checkpoint: {}".format(checkpoint_path))
-
 
 def clone_as_averaged_model(device, hparams, model, ema):
     assert ema is not None
@@ -57,12 +71,22 @@ def train_fn(args):
     upsample_factor = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
 
     model = create_model(hparams)
+    model.to(device)
+    optimizer = optim.Adam(model.parameters(), lr=hparams.learning_rate)
+    for state in optimizer.state.values():
+        for key, value in state.items():
+            if torch.is_tensor(value):
+                state[key] = value.to(device)
 
     if args.resume is not None:
         log("Resume checkpoint from: {}:".format(args.resume))
-        model.load_state_dict(torch.load(
-            args.resume, map_location=lambda storage, loc: storage))
-        global_step = int(re.findall(r"\d+\d*", args.resume)[-1])
+        checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage)
+        if torch.cuda.device_count() > 1:
+            model.module.load_state_dict(checkpoint['model'])
+        else:
+            model.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        global_step = checkpoint['steps']
     else:
         global_step = 0
 
@@ -83,10 +107,7 @@ def train_fn(args):
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 
-    model.to(device)
-
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=hparams.learning_rate)
 
     ema = ExponentialMovingAverage(args.ema_decay)
     for name, param in model.named_parameters():
@@ -97,14 +118,14 @@ def train_fn(args):
 
     while global_step < hparams.training_steps:
         for i, data in enumerate(dataloader, 0):
-            audio, local_condition = data
-            target = audio.squeeze(-1)
+            audio, target, local_condition = data
+            target = target.squeeze(-1)
             local_condition = local_condition.transpose(1, 2)
             audio, target, h = audio.to(device), target.to(device), local_condition.to(device)
 
             optimizer.zero_grad()
             output = model(audio, h)
-            loss = criterion(output[:, :, 1:], target[:, model.receptive_field:])
+            loss = criterion(output[:, :, 1:], target)
             log('step [%3d]: loss: %.3f' % (global_step, loss.item()))
             writer.add_scalar('loss', loss.item(), global_step)
 
@@ -116,9 +137,18 @@ def train_fn(args):
                 apply_moving_average(model, ema)
 
             global_step += 1
+            #out = output[1,:,:]
+            #samples=out.argmax(0)
+            #waveform = mu_law_decode(np.asarray(samples[model.receptive_field:]),hparams.quantization_channels)
+            #write_wav(waveform, hparams.sample_rate, "generated.wav")
+            #raise
 
             if global_step % hparams.checkpoint_interval == 0:
                 save_checkpoint(device, hparams, model, global_step, args.checkpoint_dir, ema)
+                out = output[1,:,:]
+                samples=out.argmax(0)
+                waveform = mu_law_decode(np.asarray(samples[model.receptive_field:]),hparams.quantization_channels)
+                write_wav(waveform, hparams.sample_rate, "train_eval_{}.wav".format(global_step))
 
 
 

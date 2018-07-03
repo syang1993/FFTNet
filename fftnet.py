@@ -32,7 +32,7 @@ class FFTNetBlock(nn.Module):
         if local_condition_channels is not None:
             self.h_l_conv = nn.Conv1d(local_condition_channels, out_channels, kernel_size=1)
             self.h_r_conv = nn.Conv1d(local_condition_channels, out_channels, kernel_size=1)
-        self.output_conv = nn.Conv1d(in_channels, out_channels, kernel_size=1)
+        self.output_conv = nn.Conv1d(out_channels, out_channels, kernel_size=1)
 
     def forward(self, x, h=None):
         x_l = self.x_l_conv(x[:, :, :-self.shift]) 
@@ -40,7 +40,7 @@ class FFTNetBlock(nn.Module):
         if h is None:
             z = F.relu(x_l + x_r)
         else:
-            h = h[:, :, :x.size(-1)]
+            h = h[:, :, -x.size(-1):]
             h_l = self.h_l_conv(h[:, :, :-self.shift])
             h_r = self.h_r_conv(h[:, :, self.shift:]) 
             z_x = x_l + x_r
@@ -79,12 +79,17 @@ class FFTNet(nn.Module):
         self.layers = nn.ModuleList()
 
         for shift in reversed(self.window_shifts):
-            fftlayer = FFTNetBlock(quantization_channels, fft_channels,
+            if shift == self.window_shifts[-1]:
+                in_channels = 1
+            else:
+                in_channels = fft_channels
+            fftlayer = FFTNetBlock(in_channels, fft_channels,
                                    shift, local_condition_channels)
             self.layers.append(fftlayer)
 
     def forward(self, x, h):
-        output = self.onehot(x)
+        #output = self.onehot(x)
+        output = x.transpose(1, 2)
         for fft_layer in self.layers:
             output = fft_layer(output, h)
         output = self.linear(output.transpose(1, 2))

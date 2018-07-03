@@ -36,20 +36,24 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, index):
         audios = self.audio_buffer[index]
-        rand_pos = np.random.randint(0, len(audios) - self.sample_size)
+        rand_pos = np.random.randint(0, len(audios) - self.sample_size - self.receptive_field)
 
         if self.use_local_condition:
             local_condition = self.local_condition_buffer[index]
+
+            lc_pad = int(self.receptive_field / float(self.upsample_factor + 0.5))
+            audio_pad = lc_pad * self.upsample_factor
+            audios = np.pad(audios, [[audio_pad, 0], [0, 0]], 'constant')
+            local_condition = np.pad(local_condition, [[lc_pad, 0], [0, 0]], 'constant')
+
             local_condition = np.repeat(local_condition, self.upsample_factor, axis=0)
-            local_condition = local_condition[rand_pos : rand_pos + self.sample_size]
+            local_condition = local_condition[rand_pos : rand_pos + self.sample_size + self.receptive_field]
         else:
             audios = np.pad(audios, [[self.receptive_field, 0], [0, 0]], 'constant')
             local_condition = None
 
-        audios = audios[rand_pos : rand_pos + self.sample_size]
+        audios = audios[rand_pos : rand_pos + self.sample_size + self.receptive_field]
         target = mu_law_encode(audios, self.quantization_channels)
-        audios = np.pad(audios, [[self.receptive_field, 0], [0, 0]], 'constant')
-        local_condition = np.pad(local_condition, [[self.receptive_field, 0], [0, 0]], 'constant')
 
         return audios, torch.LongTensor(target), torch.FloatTensor(local_condition)
     

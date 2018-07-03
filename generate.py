@@ -24,7 +24,7 @@ def display(string, variables):
     sys.stdout.write(f'\r{string}' % variables)
 
 def prepare_data(lc_file, upsample_factor, receptive_field, read_fn=lambda x: x):
-    samples = [128] * receptive_field
+    samples = [0.0] * receptive_field
     local_condition = read_fn(lc_file)
     local_condition = np.repeat(local_condition, upsample_factor, axis=0)
     local_condition = np.pad(local_condition, [[receptive_field, 0], [0, 0]], 'constant')
@@ -60,31 +60,36 @@ def generate_fn(args):
 
         start = time.time()
         for i in range(local_condition.size(-1)):
-            sample = torch.LongTensor(np.array(samples[-model.receptive_field:])).unsqueeze(0)
-            sample = sample.unsqueeze(-1)
-            h = local_condition[:, :, i : i + model.receptive_field]
+            sample = torch.FloatTensor(np.array(samples[-model.receptive_field:]).reshape(1,-1,1))
+            h = local_condition[:, :, i+1 : i+1 + model.receptive_field]
             sample, h = sample.to(device), h.to(device)
-            output = F.softmax(model(sample, h), dim=1)
-
-            prediction = output.data[0, :, -1].cpu().numpy()
-            temperature = 1.0
-            np.seterr(divide='ignore')
-            scaled_prediction = np.log(prediction) / temperature
-            scaled_prediction = (scaled_prediction -
-                                 np.logaddexp.reduce(scaled_prediction))
-            scaled_prediction = np.exp(scaled_prediction)
-            np.seterr(divide='warn')
-            sample = np.random.choice(
-                np.arange(hparams.quantization_channels),
-                p=scaled_prediction)
-            speed = (i + 1) / (time.time() - start)
-            display('Generating: %i/%i, Speed: %.2f samples/sec', (i, local_condition.size(-1), speed))
-
+            output = model(sample, h)
+            output = F.softmax(output, dim=1)
+            sample = output.argmax(1)[0,:].cpu().numpy()
+            print(sample)
+            sample = mu_law_decode(np.asarray(sample), 256)
+            print("%d %.7f" %(i, sample))
             samples.append(sample)
 
-        waveform = mu_law_decode(
-            np.asarray(samples[model.receptive_field:]),
-            hparams.quantization_channels)
+           # prediction = output.data[0, :, -1].cpu().numpy()
+           # temperature = 1.0
+           # np.seterr(divide='ignore')
+           # scaled_prediction = np.log(prediction) / temperature
+           # scaled_prediction = (scaled_prediction -
+           #                      np.logaddexp.reduce(scaled_prediction))
+           # scaled_prediction = np.exp(scaled_prediction)
+           # np.seterr(divide='warn')
+           # sample = np.random.choice(
+           #     np.arange(hparams.quantization_channels),
+           #     p=scaled_prediction)
+           # speed = (i + 1) / (time.time() - start)
+           # display('Generating: %i/%i, Speed: %.2f samples/sec', (i, local_condition.size(-1), speed))
+
+           # samples.append(sample)
+
+        #waveform = mu_law_decode(
+        #    np.asarray(samples[model.receptive_field:]),
+        #    hparams.quantization_channels)
         write_wav(waveform, hparams.sample_rate, "generated.wav")
 
 
