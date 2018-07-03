@@ -62,7 +62,7 @@ def generate_fn(args):
                                                 model.receptive_field, read_fn=lambda x: np.load(x))
 
         start = time.time()
-        for i in tqdm(range(20000)):#local_condition.size(-1)):
+        for i in tqdm(range(local_condition.size(-1) - model.receptive_field)):
             sample = torch.FloatTensor(np.array(samples[-model.receptive_field:]).reshape(1,-1,1))
             h = local_condition[:, :, i+1 : i+1 + model.receptive_field]
             sample, h = sample.to(device), h.to(device)

@@ -51,7 +51,7 @@ class CustomDataset(Dataset):
         audios = np.pad(audios, [[self.receptive_field, 0], [0, 0]], 'constant')
         local_condition = np.pad(local_condition, [[self.receptive_field, 0], [0, 0]], 'constant')
 
-        return audios, torch.LongTensor(target), torch.FloatTensor(local_condition)
+        return torch.FloatTensor(audios), torch.LongTensor(target), torch.FloatTensor(local_condition)
     
     def _load_data(self, metadata, use_local_condition, post_fn=lambda x: x):
         audio_buffer = []

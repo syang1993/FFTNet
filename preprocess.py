@@ -37,6 +37,10 @@ def _process_wav(wav_path, audio_path, mel_path):
     elif length_diff < 0:
         wav = wav[: hop_length * melspc.shape[0]]
 
+    if hparams.noise_injecting:
+        noise = np.random.normal(0.0, 1.0/hparams.quantization_channels, wav.shape)
+        wav = wav + noise
+
 
     np.save(audio_path, wav)
     np.save(mel_path, melspc)

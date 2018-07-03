@@ -137,18 +137,13 @@ def train_fn(args):
                 apply_moving_average(model, ema)
 
             global_step += 1
-            #out = output[1,:,:]
-            #samples=out.argmax(0)
-            #waveform = mu_law_decode(np.asarray(samples[model.receptive_field:]),hparams.quantization_channels)
-            #write_wav(waveform, hparams.sample_rate, "generated.wav")
-            #raise
 
             if global_step % hparams.checkpoint_interval == 0:
                 save_checkpoint(device, hparams, model, optimizer, global_step, args.checkpoint_dir, ema)
                 out = output[1,:,:]
                 samples=out.argmax(0)
                 waveform = mu_law_decode(np.asarray(samples[model.receptive_field:]),hparams.quantization_channels)
-                write_wav(waveform, hparams.sample_rate, "train_eval_{}.wav".format(global_step))
+                write_wav(waveform, hparams.sample_rate, os.path.join(args.checkpoint_dir, "train_eval_{}.wav".format(global_step)))
 
 
 
