@@ -1,0 +1,7 @@
+librosa>=0.6.0
+pysptk>=0.1.7
+sprocket
+scipy
+torch
+pyworld
+pysptk

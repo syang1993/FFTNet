@@ -23,19 +23,23 @@ def find_files(directory, pattern='*.wav'):
             files.append(os.path.join(root, filename))
     return files
 
-def _process_wav(wav_path, audio_path, mel_path):
+def _process_wav(wav_path, audio_path, spc_path):
     wav = audio.load_wav(wav_path)
-    # Extract mels
-    melspc = audio.melspectrogram(wav).astype(np.float32)
+    if hparams.feature_type == 'mcc':
+        # Extract mcc and f0
+        spc = audio.extract_mcc(wav)
+    else:
+        # Extract mels
+        spc = audio.melspectrogram(wav).astype(np.float32)
 
     # Align audios and mels
     hop_length = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
-    length_diff = len(melspc) * hop_length - len(wav)
+    length_diff = len(spc) * hop_length - len(wav)
     wav = wav.reshape(-1,1)
     if length_diff > 0:
         wav = np.pad(wav, [[0, length_diff], [0, 0]], 'constant')
     elif length_diff < 0:
-        wav = wav[: hop_length * melspc.shape[0]]
+        wav = wav[: hop_length * spc.shape[0]]
 
     if hparams.noise_injecting:
         noise = np.random.normal(0.0, 1.0/hparams.quantization_channels, wav.shape)
@@ -43,8 +47,8 @@ def _process_wav(wav_path, audio_path, mel_path):
 
 
     np.save(audio_path, wav)
-    np.save(mel_path, melspc)
-    return (audio_path, mel_path, melspc.shape[0])
+    np.save(spc_path, spc)
+    return (audio_path, spc_path, spc.shape[0])
 
     
 

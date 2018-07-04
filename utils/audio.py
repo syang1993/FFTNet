@@ -1,12 +1,18 @@
 import librosa
 import librosa.filters
 import math
+import pyworld
+import pysptk
 import numpy as np
 import tensorflow as tf
 from scipy import signal
+from scipy.interpolate import interp1d
 from hparams import hparams
 
-# From https://github.com/keithito/tacotron/blob/master/util/audio.py
+"""Reference:
+    https://github.com/keithito/tacotron/blob/master/util/audio.py
+    https://github.com/kan-bayashi/PytorchWaveNetVocoder/blob/master/src/bin/feature_extract.py
+"""
 
 def load_wav(path):
   return librosa.core.load(path, sr=hparams.sample_rate)[0]
@@ -25,7 +31,6 @@ def inv_preemphasis(x):
   return signal.lfilter([1], [1, -hparams.preemphasis], x)
 
 
-
 def melspectrogram(y):
   D = _stft(preemphasis(y))
   S = _amp_to_db(_linear_to_mel(np.abs(D))) - hparams.ref_level_db
@@ -42,6 +47,49 @@ def _stft_parameters():
   hop_length = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
   win_length = int(hparams.frame_length_ms / 1000 * hparams.sample_rate)
   return n_fft, hop_length, win_length
+
+
+def extract_mcc(wav):
+    wav = np.array(wav, dtype=np.float)
+    n_fft = (hparams.num_freq - 1) * 2
+    f0, time_axis = pyworld.harvest(wav, hparams.sample_rate, f0_floor=hparams.minf0,
+                                    f0_ceil=hparams.maxf0, frame_period=hparams.frame_shift_ms)
+    spc = pyworld.cheaptrick(wav, f0, time_axis, hparams.sample_rate, fft_size=n_fft)
+
+    f0[f0 < 0] = 0
+    uv, cont_f0 = convert_continuos_f0(f0)
+
+    mcep = pysptk.sp2mc(spc, hparams.mcep_dim, alpha=hparams.mcep_alpha)
+    uv = np.expand_dims(uv, axis=-1)
+    cont_f0 = np.expand_dims(cont_f0, axis=-1)
+    feats = np.concatenate([uv, cont_f0, mcep], axis=1)
+    return feats
+
+def convert_continuos_f0(f0):
+    # get uv information as binary
+    uv = np.float32(f0 != 0)
+
+    # get start and end of f0
+    if (f0 == 0).all():
+        logging.warn("all of the f0 values are 0.")
+        return uv, f0
+    start_f0 = f0[f0 != 0][0]
+    end_f0 = f0[f0 != 0][-1]
+
+    # padding start and end of f0 sequence
+    start_idx = np.where(f0 == start_f0)[0][0]
+    end_idx = np.where(f0 == end_f0)[0][-1]
+    f0[:start_idx] = start_f0
+    f0[end_idx:] = end_f0
+
+    # get non-zero frame index
+    nz_frames = np.where(f0 != 0)[0]
+
+    # perform linear interpolation
+    f = interp1d(nz_frames, f0[nz_frames])
+    cont_f0 = f(np.arange(0, f0.shape[0]))
+
+    return uv, cont_f0
 
 
 # Conversions:

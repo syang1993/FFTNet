@@ -4,5 +4,6 @@ checkpoints*
 database
 test
 training_data*
+test_data
 __pycache__
 *.wav
