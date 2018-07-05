@@ -32,6 +32,7 @@ class CustomDataset(Dataset):
         self.use_local_condition = use_local_condition
         self.feat_transform = feat_transform
         self.noise_injecting = noise_injecting
+
         self.audio_buffer, self.local_condition_buffer = self._load_data(
                            self.metadata, use_local_condition, post_fn=lambda x: np.load(x))
 
@@ -58,7 +59,6 @@ class CustomDataset(Dataset):
 
         audios = np.pad(audios, [[self.receptive_field, 0], [0, 0]], 'constant')
         local_condition = np.pad(local_condition, [[self.receptive_field, 0], [0, 0]], 'constant')
-
         return torch.FloatTensor(audios), torch.LongTensor(target), torch.FloatTensor(local_condition)
 
     def _load_data(self, metadata, use_local_condition, post_fn=lambda x: x):
