@@ -25,12 +25,8 @@ def find_files(directory, pattern='*.wav'):
 
 def _process_wav(wav_path, audio_path, spc_path):
     wav = audio.load_wav(wav_path)
-    if hparams.feature_type == 'mcc':
-        # Extract mcc and f0
-        spc = audio.extract_mcc(wav)
-    else:
-        # Extract mels
-        spc = audio.melspectrogram(wav).astype(np.float32)
+    # Extract mels
+    spc = audio.melspectrogram(wav).astype(np.float32)
 
     # Align audios and mels
     hop_length = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
@@ -40,11 +36,6 @@ def _process_wav(wav_path, audio_path, spc_path):
         wav = np.pad(wav, [[0, length_diff], [0, 0]], 'constant')
     elif length_diff < 0:
         wav = wav[: hop_length * spc.shape[0]]
-
-    if hparams.noise_injecting:
-        noise = np.random.normal(0.0, 1.0/hparams.quantization_channels, wav.shape)
-        wav = wav + noise
-
 
     np.save(audio_path, wav)
     np.save(spc_path, spc)

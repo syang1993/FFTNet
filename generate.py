@@ -73,10 +73,11 @@ def generate_fn(args):
             sample, h = sample.to(device), h.to(device)
             output = model(sample, h)
             output = F.softmax(output, dim=1)
-            sample = output.argmax(1)[0,:].cpu().numpy()
-            #print(sample)
+            #sample = output.argmax(1)[0,:].cpu().numpy()
+            output=output[0,:,0]
+            dist = torch.distributions.Categorical(output)
+            sample = dist.sample()
             sample = mu_law_decode(np.asarray(sample), 256)
-            #print("%d %.7f" %(i, sample))
             samples.append(sample)
 
 

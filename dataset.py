@@ -50,6 +50,9 @@ class CustomDataset(Dataset):
         target = mu_law_encode(audios, self.quantization_channels)
         audios = np.pad(audios, [[self.receptive_field, 0], [0, 0]], 'constant')
         local_condition = np.pad(local_condition, [[self.receptive_field, 0], [0, 0]], 'constant')
+        if hparams.noise_injecting:
+            noise = np.random.normal(0.0, 1.0/hparams.quantization_channels,audios.shape)
+            audio = audio + noise
 
         return torch.FloatTensor(audios), torch.LongTensor(target), torch.FloatTensor(local_condition)
     

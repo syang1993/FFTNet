@@ -6,16 +6,6 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-class OneHot(nn.Module):
-    def __init__(self, quantization_channels):
-        super().__init__()
-        self.quantization_channels = quantization_channels
-
-    def forward(self, x):
-        x = x % self.quantization_channels
-        x_onehot = x.new_zeros(x.size(0), x.size(1), self.quantization_channels).float()
-        return x_onehot.scatter_(2, x, 1).transpose(1, 2)
-
 class FFTNetBlock(nn.Module):
     def __init__(self, 
                  in_channels, 
@@ -88,7 +78,6 @@ class FFTNet(nn.Module):
             self.layers.append(fftlayer)
 
     def forward(self, x, h):
-        #output = self.onehot(x)
         output = x.transpose(1, 2)
         for fft_layer in self.layers:
             output = fft_layer(output, h)
