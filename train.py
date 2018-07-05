@@ -98,7 +98,8 @@ def train_fn(args):
                             sample_size=hparams.sample_size,
                             upsample_factor=upsample_factor,
                             quantization_channels=hparams.quantization_channels,
-                            use_local_condition=hparams.use_local_condition)
+                            use_local_condition=hparams.use_local_condition,
+                            noise_inject=hparams.noise_injecting)
 
     dataloader = DataLoader(dataset, batch_size=hparams.batch_size,
                              shuffle=True, num_workers=args.num_workers,

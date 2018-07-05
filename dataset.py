@@ -19,7 +19,8 @@ class CustomDataset(Dataset):
                  sample_size=5000,
                  upsample_factor=200,
                  quantization_channels=256,
-                 use_local_condition=True):
+                 use_local_condition=True,
+                 noise_inject=False):
         with open(meta_file, encoding='utf-8') as f:
             self.metadata = [line.strip().split('|') for line in f]
         self.receptive_field = receptive_field
@@ -27,6 +28,7 @@ class CustomDataset(Dataset):
         self.upsample_factor = upsample_factor
         self.quantization_channels = quantization_channels
         self.use_local_condition = use_local_condition
+        self.noise_inject = noise_inject
 
         self.audio_buffer, self.local_condition_buffer = self._load_data(
                            self.metadata, use_local_condition, post_fn=lambda x: np.load(x))
@@ -50,9 +52,9 @@ class CustomDataset(Dataset):
         target = mu_law_encode(audios, self.quantization_channels)
         audios = np.pad(audios, [[self.receptive_field, 0], [0, 0]], 'constant')
         local_condition = np.pad(local_condition, [[self.receptive_field, 0], [0, 0]], 'constant')
-        if hparams.noise_injecting:
-            noise = np.random.normal(0.0, 1.0/hparams.quantization_channels,audios.shape)
-            audio = audio + noise
+        if self.noise_inject:
+            noise = np.random.normal(0.0, 1.0 / self.quantization_channels, audios.shape)
+            audios = audios + noise
 
         return torch.FloatTensor(audios), torch.LongTensor(target), torch.FloatTensor(local_condition)
     

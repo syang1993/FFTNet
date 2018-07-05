@@ -49,6 +49,7 @@ def _stft_parameters():
   return n_fft, hop_length, win_length
 
 
+# Not tested
 def extract_mcc(wav):
     wav = np.array(wav, dtype=np.float)
     n_fft = (hparams.num_freq - 1) * 2
