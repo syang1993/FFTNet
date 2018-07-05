@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import torch
+import tqdm
 import torch.nn as nn
 from torch.nn import functional as F
 
@@ -82,4 +83,5 @@ class FFTNet(nn.Module):
             output = fft_layer(output, h)
         output = self.linear(output.transpose(1, 2))
         return output.transpose(1, 2)
+
 
