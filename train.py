@@ -56,13 +56,16 @@ def clone_as_averaged_model(device, hparams, model, ema):
             param.data = ema.shadow[name].clone()
     return averaged_model
 
-
 def create_model(hparams):
+    if hparams.feature_type == 'mcc':
+        lc_channel = hparams.mcep_dim + 3
+    else:
+        lc_channel = hparams.num_mels
+
     return FFTNet(n_stacks=hparams.n_stacks,
                   fft_channels=hparams.fft_channels,
                   quantization_channels=hparams.quantization_channels,
-                  local_condition_channels=hparams.num_mels)
-
+                  local_condition_channels=lc_channel)
 
 def train_fn(args):
     device = torch.device("cuda" if hparams.use_cuda else "cpu")
@@ -153,7 +156,6 @@ def train_fn(args):
                 samples=out.argmax(0)
                 waveform = mu_law_decode(np.asarray(samples[model.receptive_field:]),hparams.quantization_channels)
                 write_wav(waveform, hparams.sample_rate, os.path.join(args.checkpoint_dir, "train_eval_{}.wav".format(global_step)))
-
 
 
 if __name__ == '__main__':

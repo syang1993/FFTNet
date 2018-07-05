@@ -37,15 +37,22 @@ def prepare_data(lc_file, upsample_factor, receptive_field, read_fn=lambda x: x,
     local_condition = local_condition[np.newaxis, :, :]
     return samples, torch.FloatTensor(local_condition).transpose(1, 2), uv
 
+def create_model(hparams):
+    if hparams.feature_type == 'mcc':
+        lc_channel = hparams.mcep_dim + 3
+    else:
+        lc_channel = hparams.num_mels
+
+    return FFTNet(n_stacks=hparams.n_stacks,
+                  fft_channels=hparams.fft_channels,
+                  quantization_channels=hparams.quantization_channels,
+                  local_condition_channels=lc_channel)
 
 def generate_fn(args):
     device = torch.device("cuda" if hparams.use_cuda else "cpu")
     upsample_factor = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
-    model = FFTNet(
-        n_stacks=hparams.n_stacks,
-        fft_channels=hparams.fft_channels,
-        quantization_channels=hparams.quantization_channels,
-        local_condition_channels=hparams.num_mels)
+    model = create_model(hparams)
+
     checkpoint = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
 
     if torch.cuda.device_count() > 1:
