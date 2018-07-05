@@ -26,8 +26,12 @@ def find_files(directory, pattern='*.wav'):
 
 def _process_wav(wav_path, audio_path, spc_path):
     wav = audio.load_wav(wav_path)
-    # Extract mels
-    spc = audio.melspectrogram(wav).astype(np.float32)
+    if hparams.feature_type == 'mcc':
+        # Extract mcc and f0
+        spc = audio.extract_mcc(wav)
+    else:
+        # Extract mels
+        spc = audio.melspectrogram(wav).astype(np.float32)
 
     # Align audios and mels
     hop_length = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
