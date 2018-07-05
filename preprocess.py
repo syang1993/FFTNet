@@ -98,7 +98,7 @@ def write_metadata(metadata, out_dir):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--wav_dir', default='database/audio')
+    parser.add_argument('--wav_dir', default='cmu_us_slt_arctic/wav')
     parser.add_argument('--output', default='training_data')
     parser.add_argument('--num_workers', type=int, default=cpu_count())
     args = parser.parse_args()

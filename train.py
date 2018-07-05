@@ -161,7 +161,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--hparams', default='',
         help='Hyperparameter overrides as a comma-separated list of name=value pairs')
-    parser.add_argument('--data_dir', default='training_data_mcc_no_noise',
+    parser.add_argument('--data_dir', default='training_data',
         help='Metadata file which contains the keys of audio and melspec')
     parser.add_argument('--ema_decay', type=float, default=0.9999,
         help='Moving average decay rate.')

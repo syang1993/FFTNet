@@ -3,7 +3,7 @@ corpus/
 checkpoints*
 database
 test
-training_*
+training_data*
 test_data*
 __pycache__
 *.wav

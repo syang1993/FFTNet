@@ -70,7 +70,7 @@ def generate_fn(args):
 
         start = time.time()
         for i in tqdm(range(local_condition.size(-1) - model.receptive_field)):
-            sample = torch.FloatTensor(np.array(samples[-model.receptive_field:]).reshape(1,-1,1))
+            sample = torch.FloatTensor(np.array(samples[-model.receptive_field:]).reshape(1, -1, 1))
             h = local_condition[:, :, i+1 : i+1 + model.receptive_field]
             sample, h = sample.to(device), h.to(device)
             output = model(sample, h)
@@ -87,13 +87,16 @@ def generate_fn(args):
                     outprob = F.softmax(output, dim=0).cpu().numpy()
                     sample = outprob.argmax(0)
             else:
-                outprob = output[0, :, -1].cpu().numpy()
+                output = output[0, :, -1]
+                outprob = F.softmax(output, dim=0).cpu().numpy()
+                sample = outprob.argmax(0)
 
             sample = mu_law_decode(sample, hparams.quantization_channels)
             samples.append(sample)
 
 
-        write_wav(np.asarray(samples), hparams.sample_rate, os.path.join(os.path.dirname(args.checkpoint), "generated-t2-argmaxvoice-samplingunvoice-{}.wav".format(os.path.basename(args.checkpoint))))
+        write_wav(np.asarray(samples), hparams.sample_rate, 
+                  os.path.join(os.path.dirname(args.checkpoint), "generated-{}.wav".format(os.path.basename(args.checkpoint))))
 
 
 if __name__ == '__main__':
@@ -103,7 +106,7 @@ if __name__ == '__main__':
         help='Checkpoint path to restore model')
     parser.add_argument('--lc_file', type=str, required=True,
         help='Local condition file path.')
-    parser.add_argument('--data_dir', type=str, default='training_data_mcc', 
+    parser.add_argument('--data_dir', type=str, default='training_data', 
         help='data dir')
     parser.add_argument('--hparams', default='',
         help='Hyperparameter overrides as a comma-separated list of name=value pairs')
