@@ -60,15 +60,10 @@ def clone_as_averaged_model(device, hparams, model, ema):
     return averaged_model
 
 def create_model(hparams):
-    if hparams.feature_type == 'mcc':
-        lc_channel = hparams.mcep_dim + 3
-    else:
-        lc_channel = hparams.num_mels
-
     return FFTNet(n_stacks=hparams.n_stacks,
                   fft_channels=hparams.fft_channels,
                   quantization_channels=hparams.quantization_channels,
-                  local_condition_channels=lc_channel)
+                  local_condition_channels=hparams.num_mels)
 
 
 def train_fn(args):
