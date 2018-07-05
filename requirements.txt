@@ -4,4 +4,3 @@ sprocket
 scipy
 torch
 pyworld
-pysptk
