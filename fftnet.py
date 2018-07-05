@@ -64,7 +64,6 @@ class FFTNet(nn.Module):
         self.local_condition_channels = local_condition_channels
         self.window_shifts = [2 ** i for i in range(self.n_stacks)]
         self.receptive_field = sum(self.window_shifts) + 1
-        self.onehot = OneHot(quantization_channels)
         self.linear = nn.Linear(fft_channels, quantization_channels)
         self.layers = nn.ModuleList()
 
