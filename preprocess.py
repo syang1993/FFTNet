@@ -6,6 +6,7 @@ import argparse
 import os
 import fnmatch
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor
@@ -41,16 +42,26 @@ def _process_wav(wav_path, audio_path, spc_path):
     elif length_diff < 0:
         wav = wav[: hop_length * spc.shape[0]]
 
-    if hparams.noise_injecting:
-        noise = np.random.normal(0.0, 1.0/hparams.quantization_channels, wav.shape)
-        wav = wav + noise
-
-
     np.save(audio_path, wav)
     np.save(spc_path, spc)
     return (audio_path, spc_path, spc.shape[0])
 
+
+def calc_stats(file_list, out_dir):
+    scaler = StandardScaler()
+    for i, filename in enumerate(file_list):
+        feat = np.load(filename)
+        scaler.partial_fit(feat)
+
+    mean = scaler.mean_
+    scale = scaler.scale_
+    if hparams.feature_type == "mcc":
+        mean[0] = 0.0
+        scale[0] = 1.0
     
+    np.save(os.path.join(out_dir, 'mean'), np.float32(mean))
+    np.save(os.path.join(out_dir, 'scale'), np.float32(scale))
+
 
 def build_from_path(in_dir, audio_out_dir, mel_out_dir, num_workers=1, tqdm=lambda x: x):
     executor = ProcessPoolExecutor(max_workers=num_workers)
@@ -75,6 +86,10 @@ def preprocess(args):
     os.makedirs(mel_out_dir, exist_ok=True)
     metadata = build_from_path(in_dir, audio_out_dir, mel_out_dir, args.num_workers, tqdm=tqdm)
     write_metadata(metadata, out_dir)
+
+    spc_list = find_files(mel_out_dir, "*.npy")
+    calc_stats(spc_list, out_dir)
+     
 
 def write_metadata(metadata, out_dir):
     with open(os.path.join(out_dir, 'train.txt'), 'w', encoding='utf-8') as f:

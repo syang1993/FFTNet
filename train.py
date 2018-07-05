@@ -7,25 +7,22 @@ import os
 import re
 import sys
 import scipy.io.wavfile
+from sklearn.preprocessing import StandardScaler
 import torch
 import torch.nn as nn
 import numpy as np
 import torch.optim as optim
+from torchvision import transforms
 
 from torch.utils.data import DataLoader
 from fftnet import FFTNet
 from dataset import CustomDataset
-from utils.utils import apply_moving_average, ExponentialMovingAverage, mu_law_decode
+from utils.utils import apply_moving_average, ExponentialMovingAverage, mu_law_decode, write_wav
 from utils import infolog
 from hparams import hparams, hparams_debug_string
 from tensorboardX import SummaryWriter
 log = infolog.log
 
-
-def write_wav(wav, sample_rate, filename):
-    wav *= 32767 / max(0.01, np.max(np.abs(wav)))
-    scipy.io.wavfile.write(filename, sample_rate, wav.astype(np.int16))
-    print('Updated wav file at {}'.format(filename))
 
 def save_checkpoint(device, hparams, model, optimizer, step, checkpoint_dir, ema=None):
     model = model.module if isinstance(model, nn.DataParallel) else model
@@ -58,6 +55,7 @@ def clone_as_averaged_model(device, hparams, model, ema):
         if name in ema.shadow:
             param.data = ema.shadow[name].clone()
     return averaged_model
+
 
 def create_model(hparams):
     if hparams.feature_type == 'mcc':
@@ -98,12 +96,23 @@ def train_fn(args):
     log("receptive field: {0} ({1:.2f}ms)".format(
         model.receptive_field, model.receptive_field / hparams.sample_rate * 1000))
 
-    dataset = CustomDataset(meta_file=args.input, 
+    
+    if hparams.feature_type == "mcc":
+        scaler = StandardScaler()
+        scaler.mean_ = np.load(os.path.join(args.data_dir, 'mean.npy'))
+        scaler.scale_ = np.load(os.path.join(args.data_dir, 'scale.npy'))
+        feat_transform = transforms.Compose([lambda x: scaler.transform(x)])
+    else:
+        feat_transform = None
+
+    dataset = CustomDataset(meta_file=os.path.join(args.data_dir, 'train.txt'), 
                             receptive_field=model.receptive_field,
                             sample_size=hparams.sample_size,
                             upsample_factor=upsample_factor,
                             quantization_channels=hparams.quantization_channels,
-                            use_local_condition=hparams.use_local_condition)
+                            use_local_condition=hparams.use_local_condition,
+                            noise_injecting=hparams.noise_injecting,
+                            feat_transform=feat_transform)
 
     dataloader = DataLoader(dataset, batch_size=hparams.batch_size,
                              shuffle=True, num_workers=args.num_workers,
@@ -157,7 +166,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--hparams', default='',
         help='Hyperparameter overrides as a comma-separated list of name=value pairs')
-    parser.add_argument('--input', default='training_data/train.txt',
+    parser.add_argument('--data_dir', default='training_data_mcc_no_noise',
         help='Metadata file which contains the keys of audio and melspec')
     parser.add_argument('--ema_decay', type=float, default=0.9999,
         help='Moving average decay rate.')

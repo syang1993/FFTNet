@@ -3,6 +3,13 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import scipy.io.wavfile
+
+
+def write_wav(wav, sample_rate, filename):
+    wav *= 32767 / max(0.01, np.max(np.abs(wav)))
+    scipy.io.wavfile.write(filename, sample_rate, wav.astype(np.int16))
+    print('Updated wav file at {}'.format(filename))
 
 
 def mu_law_encode(signal, quantization_channels):
