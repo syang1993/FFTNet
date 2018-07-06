@@ -31,4 +31,5 @@ A PyTorch implementation of the [FFTNet: a Real-Time Speaker-Dependent Neural Vo
 
 ## Notes:
   * This is not offical implementation, some details are different from the paper.
+  * Now the generated speech from this repo is not so good as wavenet vocoder.
   * Work in progress.
