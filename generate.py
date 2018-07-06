@@ -94,6 +94,8 @@ def generate_fn(args):
                     outprob = F.softmax(output, dim=0).cpu().numpy()
                     sample = outprob.argmax(0)
             else:
+                # I tested sampling, but it will produce more noise,
+                # so I use argmax in this time.
                 output = output[0, :, -1]
                 outprob = F.softmax(output, dim=0).cpu().numpy()
                 sample = outprob.argmax(0)

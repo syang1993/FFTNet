@@ -2,10 +2,6 @@
 
 A PyTorch implementation of the [FFTNet: a Real-Time Speaker-Dependent Neural Vocoder](http://gfx.cs.princeton.edu/pubs/Jin_2018_FAR/)
 
-### Audio Samples
-
-* **[Audio Samples](https:///syang1993.github.io/fftnet/)** from models trained using this repo with default hyper-params.
-
 ## Quick Start:
 1. Install requirements:
   ```
@@ -24,6 +20,10 @@ A PyTorch implementation of the [FFTNet: a Real-Time Speaker-Dependent Neural Vo
   ```
   python train.py
   ```
+5. Synthesize from model:
+    ```
+    python generate.py --checkpoint=/path/to/model --lc_file=/path/to/local_conditon
+    ```
 
 ## TODO:
 - [ ] Fast generation. (Without fast generation, it generates about 230 samples per second with a free TITAN Xp.)
