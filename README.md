@@ -26,6 +26,7 @@ A PyTorch implementation of the [FFTNet: a Real-Time Speaker-Dependent Neural Vo
     ```
 
 ## TODO:
+- [ ] Test and modify conditonal sampling.
 - [ ] Fast generation. (Without fast generation, it generates about 230 samples per second with a free TITAN Xp.)
 - [ ] Post-synthesis denoising.
 
